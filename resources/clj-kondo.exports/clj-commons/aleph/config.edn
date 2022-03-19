@@ -1,1 +1,4 @@
-{:hooks {:macroexpand {aleph.http/def-http-method aleph.clj-kondo-hooks/def-http-method}}}
+{:linters {:aleph.netty/invalid-handler-key {:level :warning}}
+ :hooks {:macroexpand  {aleph.http/def-http-method aleph.clj-kondo-hooks/def-http-method
+                        potemkin/def-derived-map   aleph.clj-kondo-hooks/def-derived-map}
+         :analyze-call {aleph.netty/channel-inbound-handler aleph.clj-kondo-hooks/channel-inbound-handler}}}

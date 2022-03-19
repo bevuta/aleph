@@ -1,24 +1,17 @@
 (ns aleph.udp
   (:require
-    [potemkin :as p]
-    [aleph.netty :as netty]
-    [clojure.tools.logging :as log]
-    [manifold.deferred :as d]
-    [manifold.stream :as s])
+   [aleph.netty :as netty]
+   [clojure.tools.logging :as log]
+   [manifold.deferred :as d]
+   [manifold.stream :as s]
+   [potemkin :as p])
   (:import
-    [java.net
-     SocketAddress
-     InetSocketAddress]
-    [io.netty.channel
-     ChannelOption]
-    [io.netty.bootstrap
-     Bootstrap]
-    [io.netty.channel.socket
-     DatagramPacket]
-    [io.netty.channel.socket.nio
-     NioDatagramChannel]
-    [io.netty.channel.epoll
-     EpollDatagramChannel]))
+   (io.netty.bootstrap Bootstrap)
+   (io.netty.channel ChannelOption)
+   (io.netty.channel.epoll EpollDatagramChannel)
+   (io.netty.channel.socket DatagramPacket)
+   (io.netty.channel.socket.nio NioDatagramChannel)
+   (java.net InetSocketAddress SocketAddress)))
 
 (p/def-derived-map UdpPacket [^DatagramPacket packet content]
   :sender (-> packet ^InetSocketAddress (.sender))
@@ -53,7 +46,7 @@
             (.handler
               (netty/channel-inbound-handler
                 :exception-caught
-                ([_ ctx ex]
+                ([_ _ctx ex]
                   (when-not (d/error! d ex)
                     (log/warn ex "error in UDP socket")))
 
