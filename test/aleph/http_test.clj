@@ -1,29 +1,17 @@
 (ns aleph.http-test
-  (:use
-    [clojure test])
   (:require
-    [clojure.java.io :as io]
-    [aleph
-     [http :as http]
-     [netty :as netty]
-     [flow :as flow]]
-    [byte-streams :as bs]
-    [manifold.deferred :as d]
-    [manifold.stream :as s])
+   [aleph.flow :as flow]
+   [aleph.http :as http]
+   [aleph.netty :as netty]
+   [byte-streams :as bs]
+   [clojure.test :refer [deftest is testing]]
+   [manifold.deferred :as d]
+   [manifold.stream :as s])
   (:import
-    [java.util.concurrent
-     Executors]
-    [java.io
-     File
-     ByteArrayInputStream]
-    [java.util.zip
-     GZIPInputStream
-     ZipException]
-    [java.util.concurrent
-     TimeoutException]
-    [aleph.utils
-     ConnectionTimeoutException
-     RequestTimeoutException]))
+   (aleph.utils ConnectionTimeoutException RequestTimeoutException)
+   (java.io File)
+   (java.util.concurrent TimeoutException)
+   (java.util.zip GZIPInputStream ZipException)))
 
 ;;;
 
@@ -62,35 +50,35 @@
 (def http-file-region-response (http/file filepath 5 4))
 (def stream-response "Stream!")
 
-(defn string-handler [request]
+(defn string-handler [_request]
   {:status 200
    :body string-response})
 
-(defn seq-handler [request]
+(defn seq-handler [_request]
   {:status 200
    :body seq-response})
 
-(defn file-handler [request]
+(defn file-handler [_request]
   {:status 200
    :body file-response})
 
-(defn http-file-handler [request]
+(defn http-file-handler [_request]
   {:status 200
    :body http-file-response})
 
-(defn http-file-region-handler [request]
+(defn http-file-region-handler [_request]
   {:status 200
    :body http-file-region-response})
 
-(defn stream-handler [request]
+(defn stream-handler [_request]
   {:status 200
    :body (bs/to-input-stream stream-response)})
 
-(defn slow-handler [request]
+(defn slow-handler [_request]
   {:status 200
    :body (cons "1" (lazy-seq (do (Thread/sleep 500) '("2"))))})
 
-(defn manifold-handler [request]
+(defn manifold-handler [_request]
   {:status 200
    :body (->> stream-response (map str) s/->source)})
 
@@ -102,14 +90,14 @@
   {:status 200
    :body (->> request :body bs/to-line-seq)})
 
-(defn hello-handler [request]
+(defn hello-handler [_request]
   {:status 200
    :body "hello"})
 
-(defn big-handler [request]
+(defn big-handler [_request]
   {:status 200
    :body (->> (s/periodically 0.1 #(byte-array 1024))
-           (s/transform (take 1e3)))})
+              (s/transform (take (long 1e3))))})
 
 (defn redirect-handler [{:keys [query-string] :as request}]
   (let [count (-> (.split #"[?=]" query-string) second Integer/parseInt)
@@ -145,7 +133,7 @@
              (try
                (deliver latch true) ;;this can be triggered more than once, sometimes
                (.close ^java.io.Closeable @browser-server)
-               (catch Exception e)))})
+               (catch Exception _)))})
 
 (defn print-vals [& args]
   (apply prn args)
@@ -205,18 +193,17 @@
 
 (deftest test-response-formats
   (with-handler basic-handler
-    (doseq [[index [path result]] (map-indexed vector expected-results)]
-      (is
-        (= result
-          (bs/to-string
-            (:body
-              @(http-get (str "http://localhost:" port "/" path)))))))))
+    (doseq [[path result] expected-results]
+      (is (= result
+             (bs/to-string
+              (:body
+               @(http-get (str "http://localhost:" port "/" path)))))))))
 
 (deftest test-compressed-response
   (with-compressed-handler basic-handler
-    (doseq [[index [path result]] (map-indexed vector expected-results)
+    (doseq [[path result] expected-results
             :let [resp @(http-get (str "http://localhost:" port "/" path)
-                          {:headers {:accept-encoding "gzip"}})
+                                  {:headers {:accept-encoding "gzip"}})
                   unzipped (try
                              (bs/to-string (GZIPInputStream. (:body resp)))
                              (catch ZipException _ nil))]]
@@ -226,7 +213,7 @@
 
 (deftest test-ssl-response-formats
   (with-ssl-handler basic-handler
-    (doseq [[index [path result]] (map-indexed vector expected-results)]
+    (doseq [[path result] expected-results]
       (is
        (= result
           (bs/to-string
@@ -252,7 +239,7 @@
 
 (deftest test-overly-long-request
   (with-handler basic-handler
-    (= 414 @(http-get (apply str "http://localhost:" port  "/" (repeat 1e4 "a"))))))
+    (= 414 @(http-get (apply str "http://localhost:" port  "/" (repeat (long 1e4) "a"))))))
 
 (deftest test-echo
   (with-handler basic-handler
@@ -362,10 +349,6 @@
          (let [rsp (http/get (str "http://localhost:" port) {:connection-pool pool})]
            (is (= http/default-response-executor (.executor rsp))))))))
 
-(defn echo-handler [req]
-  {:status 200
-   :body (:body req)})
-
 (deftest test-trace-request-omitted-body
   (with-handler echo-handler
     (is (= "" (-> @(http/trace (str "http://localhost:" port) {:body "REQUEST"})
@@ -420,14 +403,14 @@
 
 (deftest test-large-responses
   (with-handler basic-handler
-    (let [pool (http/connection-pool {:connection-options {:response-buffer-size 16}})]
-      (dotimes [i 1 #_1e6]
+    (let [_pool (http/connection-pool {:connection-options {:response-buffer-size 16}})]
+      (dotimes [_ 1 #_1e6]
         #_(when (zero? (rem i 1e2))
             (prn i))
         (-> @(http/get (str "http://localhost:" port "/big")
-               {:as :byte-array})
-          :body
-          count)))))
+                       {:as :byte-array})
+            :body
+            count)))))
 
 ;;;
 
@@ -443,10 +426,10 @@
   (println "starting WebSocket benchmark server on 8080")
   (netty/leak-detector-level! :disabled)
   (let [server (http/start-server
-                 (fn [req]
-                   (d/let-flow [s (http/websocket-connection req)]
-                     (s/consume #(s/put! s %) s)))
-                 {:port 8080})]
+                (fn [req]
+                  (d/let-flow [s (http/websocket-connection req)]
+                    (s/consume #(s/put! s %) s)))
+                {:port 8080})]
     (Thread/sleep (* 1000 60))
     (println "stopping server")
     (.close ^java.io.Closeable server)))

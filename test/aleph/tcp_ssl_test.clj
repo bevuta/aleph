@@ -1,18 +1,18 @@
 (ns aleph.tcp-ssl-test
-  (:use
-    [clojure test])
-  (:require [aleph.tcp-test :refer [with-server]]
-    [aleph.tcp :as tcp]
-    [aleph.netty :as netty]
-    [manifold.stream :as s]
-    [byte-streams :as bs])
+  (:require
+   [aleph.netty :as netty]
+   [aleph.tcp :as tcp]
+   [aleph.tcp-test :refer [with-server]]
+   [byte-streams :as bs]
+   [clojure.test :refer [deftest is]]
+   [manifold.stream :as s])
   (:import
-   [java.security KeyFactory PrivateKey]
-   [java.security.cert CertificateFactory X509Certificate]
-   [java.io ByteArrayInputStream]
-   [java.security.spec RSAPrivateCrtKeySpec]
-   [io.netty.handler.ssl SslContextBuilder ClientAuth]
-   [org.apache.commons.codec.binary Base64]))
+   (io.netty.handler.ssl ClientAuth SslContextBuilder)
+   (java.io ByteArrayInputStream)
+   (java.security KeyFactory PrivateKey)
+   (java.security.cert CertificateFactory X509Certificate)
+   (java.security.spec RSAPrivateCrtKeySpec)
+   (org.apache.commons.codec.binary Base64)))
 
 (netty/leak-detector-level! :paranoid)
 
