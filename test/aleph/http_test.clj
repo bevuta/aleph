@@ -570,3 +570,16 @@
                                       (.write ctx msg p)))))})
       (let [resp @(http-get (str "http://localhost:" port "/string"))]
         (is (= test-header-val (get (:headers resp) test-header-name)))))))
+
+(deftest test-leak-in-raw-stream-handler
+  (with-raw-handler basic-handler
+    (let [resp @(http-put (str "http://localhost:" port "/string")
+                          ;; NOTE: The request handler doesn't consume
+                          ;; this body. As per the :raw-stream?
+                          ;; contract, this leads to a buffer leak.
+                          ;; However, Netty's leak detector in
+                          ;; paranoid mode still doesn't pick it up
+                          ;; most of the time.
+                          {:body "Hello, world!"})]
+      (is (= 200 (:status resp)))
+      (is (= "String!" (bs/to-string (:body resp)))))))
