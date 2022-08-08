@@ -3,6 +3,7 @@
    [aleph.flow :as flow]
    [aleph.http :as http]
    [aleph.netty :as netty]
+   [aleph.ResourceLeakDetector]
    [aleph.ssl :as ssl]
    [aleph.tcp :as tcp]
    [clj-commons.byte-streams :as bs]
@@ -27,6 +28,27 @@
 (def ^:dynamic ^io.aleph.dirigiste.IPool *pool* nil)
 
 (netty/leak-detector-level! :paranoid)
+
+(defn enable-eager-leak-detection? []
+  (= "aleph.ResourceLeakDetector"
+     (System/getProperty "io.netty.customResourceLeakDetector")))
+
+(defn leak-detector-fixture [run-test]
+  (aleph.ResourceLeakDetector/with-leak-collection
+    (fn []
+      ;; A blind run to prime the leak detector
+      (binding [clojure.test/*report-counters* nil ; for clojure.test
+                clojure.test/report identity] ; for cider.nrepl.middleware.test
+        (run-test))
+      (System/gc)
+      ;; The actual run
+      (run-test)
+      (System/gc))
+    (fn [leaks]
+      (is (empty? leaks)))))
+
+(when (enable-eager-leak-detection?)
+  (use-fixtures :each leak-detector-fixture))
 
 (defn default-options []
   {:socket-timeout 1e3
@@ -570,14 +592,6 @@
                                       (.write ctx msg p)))))})
       (let [resp @(http-get (str "http://localhost:" port "/string"))]
         (is (= test-header-val (get (:headers resp) test-header-name)))))))
-
-(use-fixtures :each (fn [run-test]
-                      (binding [clojure.test/*report-counters* nil
-                                clojure.test/report identity]
-                        (run-test))
-                      (System/gc)
-                      (run-test)
-                      (System/gc)))
 
 (deftest ^:leak test-leak-in-raw-stream-handler
   (with-raw-handler basic-handler
