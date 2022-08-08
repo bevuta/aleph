@@ -59,10 +59,13 @@
                                  (cons (:tag %) (keys %))))
                    :benchmark :benchmark
                    :stress :stress
+                   :leak :leak
                    :all (constantly true)}
   :jvm-opts ^:replace ["-server"
                        "-Xmx2g"
                        "-XX:+HeapDumpOnOutOfMemoryError"
+                       "-Dio.netty.allocator.type=unpooled"
+                       "-Dio.netty.leakDetection.level=paranoid"
                        #_"-XX:+PrintCompilation"
                        #_"-XX:+UnlockDiagnosticVMOptions"
                        #_"-XX:+PrintInlining"]
