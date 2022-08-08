@@ -8,7 +8,7 @@
    [clj-commons.byte-streams :as bs]
    [clojure.java.io :as io]
    [clojure.string :as str]
-   [clojure.test :refer [deftest is testing]]
+   [clojure.test :refer [deftest is testing use-fixtures]]
    [manifold.deferred :as d]
    [manifold.stream :as s]
    [manifold.time :as t])
@@ -571,6 +571,14 @@
       (let [resp @(http-get (str "http://localhost:" port "/string"))]
         (is (= test-header-val (get (:headers resp) test-header-name)))))))
 
+(use-fixtures :each (fn [run-test]
+                      (binding [clojure.test/*report-counters* nil
+                                clojure.test/report identity]
+                        (run-test))
+                      (System/gc)
+                      (run-test)
+                      (System/gc)))
+
 (deftest ^:leak test-leak-in-raw-stream-handler
   (with-raw-handler basic-handler
     (let [resp @(http-put (str "http://localhost:" port "/string")
@@ -582,19 +590,4 @@
                           ;; most of the time.
                           {:body "Hello, world!"})]
       (is (= 200 (:status resp)))
-      (is (= "String!" (bs/to-string (:body resp))))))
-  (System/gc))
-
-(deftest ^:leak test-leak-in-raw-stream-handler2
-  (with-raw-handler basic-handler
-    (let [resp @(http-put (str "http://localhost:" port "/string")
-                          ;; NOTE: The request handler doesn't consume
-                          ;; this body. As per the :raw-stream?
-                          ;; contract, this leads to a buffer leak.
-                          ;; However, Netty's leak detector in
-                          ;; paranoid mode still doesn't pick it up
-                          ;; most of the time.
-                          {:body "Hello, world!"})]
-      (is (= 200 (:status resp)))
-      (is (= "String!" (bs/to-string (:body resp))))))
-  (System/gc))
+      (is (= "String!" (bs/to-string (:body resp)))))))
