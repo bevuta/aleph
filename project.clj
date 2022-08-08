@@ -40,7 +40,8 @@
              :test {:dependencies [[org.bouncycastle/bcprov-jdk15on "1.69"]
                                    [org.bouncycastle/bcpkix-jdk15on "1.69"]]
                     :jvm-opts ["-Dorg.slf4j.simpleLogger.defaultLogLevel=off"]}
-             :eager-leak-detection {:jvm-opts ["-Dio.netty.customResourceLeakDetector=aleph.ResourceLeakDetector"]}}
+             :eager-leak-detection {:aot [aleph.ResourceLeakDetector]
+                                    :jvm-opts ["-Dio.netty.customResourceLeakDetector=aleph.ResourceLeakDetector"]}}
   :codox {:src-dir-uri "https://github.com/ztellman/aleph/tree/master/"
           :src-linenum-anchor-prefix "L"
           :defaults {:doc/format :markdown}

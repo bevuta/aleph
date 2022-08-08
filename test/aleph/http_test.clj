@@ -29,26 +29,8 @@
 
 (netty/leak-detector-level! :paranoid)
 
-(defn enable-eager-leak-detection? []
-  (= "aleph.ResourceLeakDetector"
-     (System/getProperty "io.netty.customResourceLeakDetector")))
-
-(defn leak-detector-fixture [run-test]
-  (aleph.ResourceLeakDetector/with-leak-collection
-    (fn []
-      ;; A blind run to prime the leak detector
-      (binding [clojure.test/*report-counters* nil ; for clojure.test
-                clojure.test/report identity] ; for cider.nrepl.middleware.test
-        (run-test))
-      (System/gc)
-      ;; The actual run
-      (run-test)
-      (System/gc))
-    (fn [leaks]
-      (is (empty? leaks)))))
-
-(when (enable-eager-leak-detection?)
-  (use-fixtures :each leak-detector-fixture))
+(when (aleph.ResourceLeakDetector/enabled?)
+  (use-fixtures :each aleph.ResourceLeakDetector/fixture))
 
 (defn default-options []
   {:socket-timeout 1e3
