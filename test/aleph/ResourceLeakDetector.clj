@@ -5,7 +5,30 @@
    [clojure.string :as str]
    [clojure.test :as test])
   (:import
-   (io.netty.buffer AbstractByteBufAllocator)))
+   (io.netty.buffer AbstractByteBufAllocator)
+   (io.netty.util ResourceLeakDetectorFactory)))
+
+(defn enabled? []
+  (= "aleph.ResourceLeakDetector"
+     (System/getProperty "io.netty.customResourceLeakDetector")))
+
+(def active-resource-leak-detector-class
+  (delay
+    (class (.newResourceLeakDetector (ResourceLeakDetectorFactory/instance) String))))
+
+(def active?
+  (delay
+    (= (Class/forName "aleph.ResourceLeakDetector")
+       @active-resource-leak-detector-class)))
+
+(defn ensure-active! []
+  (when-not @active?
+    (throw (RuntimeException.
+            (str "-Dio.netty.customResourceLeakDetector is set to `aleph.ResourceLeakDetector`"
+                 " but the active resource leak detector is"
+                 " `" @active-resource-leak-detector-class"`. This indicates that"
+                 " `io.netty.util.ResourceLeakDetectorFactory` ran into an initialization error."
+                 " Enable Netty debug logging to diagnose the cause.")))))
 
 (def +max-gc-runs+
   "Maximum number of times the GC will be run to flush a probe through
@@ -50,18 +73,12 @@
           (recur (dec n))))))
 
 (defn with-leak-collection [f handle-leaks]
+  (ensure-active!)
   (with-redefs [current-leaks (atom [])]
     (f)
     (leak-probe!)
     (let [leaks (flush!)]
       (handle-leaks (remove-probes leaks)))))
-
-;; TODO: When Netty can't lookup the given class for some reason, it
-;; will silently fall back to the default implementation. So this
-;; check here is actually not 100% accurate.
-(defn enabled? []
-  (= "aleph.ResourceLeakDetector"
-     (System/getProperty "io.netty.customResourceLeakDetector")))
 
 (defn fixture [run-test]
   (with-leak-collection
