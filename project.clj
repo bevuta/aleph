@@ -41,7 +41,9 @@
                                    [org.bouncycastle/bcpkix-jdk15on "1.69"]]
                     :jvm-opts ["-Dorg.slf4j.simpleLogger.defaultLogLevel=off"]}
              :eager-leak-detection {:aot [aleph.ResourceLeakDetector]
-                                    :jvm-opts ["-Dio.netty.customResourceLeakDetector=aleph.ResourceLeakDetector"]}}
+                                    :jvm-opts ["-Dio.netty.allocator.type=unpooled"
+                                               "-Dio.netty.leakDetection.level=paranoid"
+                                               "-Dio.netty.customResourceLeakDetector=aleph.ResourceLeakDetector"]}}
   :codox {:src-dir-uri "https://github.com/ztellman/aleph/tree/master/"
           :src-linenum-anchor-prefix "L"
           :defaults {:doc/format :markdown}
@@ -66,8 +68,6 @@
   :jvm-opts ^:replace ["-server"
                        "-Xmx2g"
                        "-XX:+HeapDumpOnOutOfMemoryError"
-                       "-Dio.netty.allocator.type=unpooled"
-                       "-Dio.netty.leakDetection.level=paranoid"
                        #_"-XX:+PrintCompilation"
                        #_"-XX:+UnlockDiagnosticVMOptions"
                        #_"-XX:+PrintInlining"]
