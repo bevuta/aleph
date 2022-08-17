@@ -4,14 +4,18 @@
    [aleph.http.core :as http-core]
    [aleph.http.server :as http-server]
    [aleph.netty :as netty]
+   [aleph.ResourceLeakDetector]
    [clj-commons.byte-streams :as bs]
-   [clojure.test :refer [deftest is testing]]
+   [clojure.test :refer [deftest is testing use-fixtures]]
    [clojure.tools.logging :as log]
    [manifold.deferred :as d]
    [manifold.stream :as s]
    [manifold.time :as time]))
 
 (netty/leak-detector-level! :paranoid)
+
+(when (aleph.ResourceLeakDetector/enabled?)
+  (use-fixtures :each aleph.ResourceLeakDetector/fixture))
 
 (defmacro with-server [server & body]
   `(let [server# ~server]

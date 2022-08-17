@@ -1,16 +1,20 @@
 (ns aleph.tcp-ssl-test
   (:require
    [aleph.netty :as netty]
+   [aleph.ResourceLeakDetector]
    [aleph.ssl :as ssl]
    [aleph.tcp :as tcp]
    [aleph.tcp-test :refer [with-server]]
    [clj-commons.byte-streams :as bs]
-   [clojure.test :refer [deftest is]]
+   [clojure.test :refer [deftest is use-fixtures]]
    [manifold.stream :as s])
   (:import
    (java.security.cert X509Certificate)))
 
 (netty/leak-detector-level! :paranoid)
+
+(when (aleph.ResourceLeakDetector/enabled?)
+  (use-fixtures :each aleph.ResourceLeakDetector/fixture))
 
 (set! *warn-on-reflection* false)
 

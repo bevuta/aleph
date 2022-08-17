@@ -3,12 +3,16 @@
    [aleph.flow :as flow]
    [aleph.http :as http]
    [aleph.netty :as netty]
+   [aleph.ResourceLeakDetector]
    [aleph.tcp :as tcp]
    [clj-commons.byte-streams :as bs]
    [clojure.string :as str]
-   [clojure.test :refer [deftest is testing]]
+   [clojure.test :refer [deftest is testing use-fixtures]]
    [manifold.deferred :as d]
    [manifold.stream :as s]))
+
+(when (aleph.ResourceLeakDetector/enabled?)
+  (use-fixtures :each aleph.ResourceLeakDetector/fixture))
 
 (defmacro with-server [server & body]
   `(let [server# ~server]

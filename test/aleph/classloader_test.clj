@@ -2,7 +2,8 @@
   (:require
    [aleph.http :as http]
    [aleph.netty :as netty]
-   [clojure.test :refer [deftest is testing]]
+   [aleph.ResourceLeakDetector]
+   [clojure.test :refer [deftest is testing use-fixtures]]
    [dynamic-redef.core :refer [with-dynamic-redefs]]
    [manifold.deferred :as d]
    [manifold.utils :refer [when-class]]
@@ -11,6 +12,9 @@
    (io.netty.util.concurrent Future)
    (java.lang.management ManagementFactory)
    (java.util.concurrent CompletableFuture)))
+
+(when (aleph.ResourceLeakDetector/enabled?)
+  (use-fixtures :each aleph.ResourceLeakDetector/fixture))
 
 (defn- operation-complete
   "Stubs for `GenericFutureListener/operationComplete` which

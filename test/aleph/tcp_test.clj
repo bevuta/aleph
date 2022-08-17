@@ -3,10 +3,13 @@
    [aleph.netty :as netty]
    [aleph.tcp :as tcp]
    [clj-commons.byte-streams :as bs]
-   [clojure.test :refer [deftest is]]
+   [clojure.test :refer [deftest is use-fixtures]]
    [manifold.stream :as s]))
 
 (netty/leak-detector-level! :paranoid)
+
+(when (aleph.ResourceLeakDetector/enabled?)
+  (use-fixtures :each aleph.ResourceLeakDetector/fixture))
 
 (defn echo-handler [s _]
   (s/connect s s))

@@ -2,11 +2,15 @@
   (:require
    [aleph.netty :as netty]
    [aleph.udp :as udp]
+   [aleph.ResourceLeakDetector]
    [clj-commons.byte-streams :as bs]
-   [clojure.test :refer [deftest is]]
+   [clojure.test :refer [deftest is use-fixtures]]
    [manifold.stream :as s]))
 
 (netty/leak-detector-level! :paranoid)
+
+(when (aleph.ResourceLeakDetector/enabled?)
+  (use-fixtures :each aleph.ResourceLeakDetector/fixture))
 
 (defmacro with-server [server & body]
   `(let [server# ~server]
