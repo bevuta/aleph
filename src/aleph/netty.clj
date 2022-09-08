@@ -1213,10 +1213,10 @@ initialize an DnsAddressResolverGroup instance.
                   (.connect b remote-address local-address)
                   (.connect b remote-address))]
 
-          (-> (wrap-future f)
-              (d/chain'
-               (fn [_]
-                 (maybe-ssl-handshake-future (.channel f))))))))))
+          (d/chain' (wrap-future f)
+            (fn [_]
+              (let [ch (.channel ^ChannelFuture f)]
+                (maybe-ssl-handshake-future ch)))))))))
 
 (defn start-server
   [pipeline-builder
