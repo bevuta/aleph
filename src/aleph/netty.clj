@@ -1144,7 +1144,7 @@ initialize an DnsAddressResolverGroup instance.
 
 (defn on-connection-fully-established
   "Invokes `callback` when the connection associated with the given
-  `pipeline` has been fully established. Specifically, when an
+  channel has been fully established. Specifically, when an
   `SslHandler` is present on the pipeline, it schedules `callback` to
   be invoked only after the SSL handshake has completed
   successfully. Otherwise, it is invoked immediately.
