@@ -49,16 +49,16 @@
 
       :channel-active
       ([_ ctx]
-       (let [ch (.channel ctx)]
-         (netty/on-connection-fully-established
-          ch
-          (fn []
-            (handler
-             (doto (s/splice
-                    (netty/sink ch true netty/to-byte-buf)
-                    (reset! in (netty/source ch)))
-               (reset-meta! {:aleph/channel ch}))
-             (->TcpConnection ch)))))
+       (-> (.channel ctx)
+           netty/maybe-ssl-handshake-future
+           (d/on-realized (fn [ch]
+                            (handler
+                             (doto (s/splice
+                                    (netty/sink ch true netty/to-byte-buf)
+                                    (reset! in (netty/source ch)))
+                               (reset-meta! {:aleph/channel ch}))
+                             (->TcpConnection ch)))
+                          netty/ignore-ssl-handshake-errors))
        (.fireChannelActive ctx))
 
       :channel-read
@@ -122,16 +122,14 @@
 
        :channel-active
        ([_ ctx]
-        (let [ch (.channel ctx)]
-          (netty/on-connection-fully-established
-           ch
-           (fn []
-             (d/success! d
-                         (doto
-                             (s/splice
-                              (netty/sink ch true netty/to-byte-buf)
-                              (reset! in (netty/source ch)))
-                           (reset-meta! {:aleph/channel ch}))))))
+        (-> (.channel ctx)
+            netty/maybe-ssl-handshake-future
+            (d/on-realized (fn [ch]
+                             (d/success! d (doto (s/splice
+                                                  (netty/sink ch true netty/to-byte-buf)
+                                                  (reset! in (netty/source ch)))
+                                             (reset-meta! {:aleph/channel ch}))))
+                           netty/ignore-ssl-handshake-errors))
         (.fireChannelActive ctx))
 
        :channel-read

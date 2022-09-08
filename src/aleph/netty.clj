@@ -1142,25 +1142,13 @@ initialize an DnsAddressResolverGroup instance.
         wrap-future)
     (d/success-deferred ch)))
 
-(defn on-connection-fully-established
-  "Invokes `callback` when the connection associated with the given
-  channel has been fully established. Specifically, when an
-  `SslHandler` is present on the pipeline, it schedules `callback` to
-  be invoked only after the SSL handshake has completed
-  successfully. Otherwise, it is invoked immediately.
-
-  Intended for use in `:channel-active` handlers which is why
-  handshake errors are ignored (see code comment)."
-  [^Channel ch callback]
-  (-> (maybe-ssl-handshake-future ch)
-      (d/on-realized (fn [_]
-                       (callback))
-                     ;; No need to handle errors here since
-                     ;; the SSL handler will terminate the
-                     ;; whole pipeline by throwing a
-                     ;; `javax.net.ssl.SSLHandshakeException`
-                     ;; in this case anyway.
-                     (fn [_]))))
+(defn ignore-ssl-handshake-errors
+  "Intended for use as error callback on a `maybe-ssl-handshake-future`
+  within a `:channel-active` handler. In this context, SSL handshake
+  errors don't need to be handled since the SSL handler will terminate
+  the whole pipeline by throwing `javax.net.ssl.SSLHandshakeException`
+  anyway."
+  [_])
 
 (defn create-client
   ([pipeline-builder
