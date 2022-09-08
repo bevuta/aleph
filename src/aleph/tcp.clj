@@ -64,10 +64,10 @@
 
       :channel-active
       ([_ ctx]
-       (netty/on-connection-fully-established
-        (.pipeline ctx)
-        (fn []
-          (let [ch (.channel ctx)]
+       (let [ch (.channel ctx)]
+         (netty/on-connection-fully-established
+          ch
+          (fn []
             (handler
              (doto (s/splice
                     (netty/sink ch true netty/to-byte-buf)
@@ -137,16 +137,16 @@
 
        :channel-active
        ([_ ctx]
-        (netty/on-connection-fully-established
-         (.pipeline ctx)
-         (fn []
-           (let [ch (.channel ctx)]
+        (let [ch (.channel ctx)]
+          (netty/on-connection-fully-established
+           ch
+           (fn []
              (d/success! d
                          (doto
                              (s/splice
                               (netty/sink ch true netty/to-byte-buf)
                               (reset! in (netty/source ch)))
-                             (reset-meta! {:aleph/channel ch}))))))
+                           (reset-meta! {:aleph/channel ch}))))))
         (.fireChannelActive ctx))
 
        :channel-read

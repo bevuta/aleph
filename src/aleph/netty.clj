@@ -1131,26 +1131,36 @@ initialize an DnsAddressResolverGroup instance.
   [dns-options]
   (DnsAddressResolverGroup. (dns-resolver-group-builder dns-options)))
 
+(defn maybe-ssl-handshake-future
+  "Returns a deferred which resolves to the channel after a potential
+  SSL handshake has completed successfully. If no `SslHandler` is
+  present on the associated pipeline, resolves immediately."
+  [^Channel ch]
+  (if-let [^SslHandler ssl-handler (-> ch .pipeline (.get SslHandler))]
+    (-> ssl-handler
+        .handshakeFuture
+        wrap-future)
+    (d/success-deferred ch)))
+
 (defn on-connection-fully-established
   "Invokes `callback` when the connection associated with the given
   `pipeline` has been fully established. Specifically, when an
   `SslHandler` is present on the pipeline, it schedules `callback` to
   be invoked only after the SSL handshake has completed
-  successfully. Otherwise, it is invoked immediately."
-  [^ChannelPipeline pipeline callback]
-  (if-let [^SslHandler ssl-handler (.get pipeline SslHandler)]
-    (-> ssl-handler
-        .handshakeFuture
-        wrap-future
-        (d/on-realized (fn [_]
-                         (callback))
-                       ;; No need to handle errors here since
-                       ;; the SSL handler will terminate the
-                       ;; whole pipeline by throwing a
-                       ;; `javax.net.ssl.SSLHandshakeException`
-                       ;; in this case anyway.
-                       (fn [_])))
-    (callback)))
+  successfully. Otherwise, it is invoked immediately.
+
+  Intended for use in `:channel-active` handlers which is why
+  handshake errors are ignored (see code comment)."
+  [^Channel ch callback]
+  (-> (maybe-ssl-handshake-future ch)
+      (d/on-realized (fn [_]
+                       (callback))
+                     ;; No need to handle errors here since
+                     ;; the SSL handler will terminate the
+                     ;; whole pipeline by throwing a
+                     ;; `javax.net.ssl.SSLHandshakeException`
+                     ;; in this case anyway.
+                     (fn [_]))))
 
 (defn create-client
   ([pipeline-builder
@@ -1213,22 +1223,12 @@ initialize an DnsAddressResolverGroup instance.
 
               f (if local-address
                   (.connect b remote-address local-address)
-                  (.connect b remote-address))
-              c (d/deferred)]
+                  (.connect b remote-address))]
 
           (-> (wrap-future f)
               (d/chain'
                (fn [_]
-                 (let [ch (.channel ^ChannelFuture f)]
-                   (on-connection-fully-established
-                    (.pipeline ch)
-                    (fn []
-                      (d/success! c ch))))))
-              (d/catch
-               (fn [e]
-                 (d/error! c e))))
-
-          c)))))
+                 (maybe-ssl-handshake-future (.channel f))))))))))
 
 (defn start-server
   [pipeline-builder
