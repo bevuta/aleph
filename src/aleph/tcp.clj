@@ -64,8 +64,8 @@
 
       :channel-active
       ([_ ctx]
-       (on-connection-established
-        ctx
+       (netty/on-connection-fully-established
+        (.pipeline ctx)
         (fn []
           (let [ch (.channel ctx)]
             (handler
@@ -137,8 +137,8 @@
 
        :channel-active
        ([_ ctx]
-        (on-connection-established
-         ctx
+        (netty/on-connection-fully-established
+         (.pipeline ctx)
          (fn []
            (let [ch (.channel ctx)]
              (d/success! d

@@ -1131,6 +1131,27 @@ initialize an DnsAddressResolverGroup instance.
   [dns-options]
   (DnsAddressResolverGroup. (dns-resolver-group-builder dns-options)))
 
+(defn on-connection-fully-established
+  "Invokes `callback` when the connection associated with the given
+  `pipeline` has been fully established. Specifically, when an
+  `SslHandler` is present on the pipeline, it schedules `callback` to
+  be invoked only after the SSL handshake has completed
+  successfully. Otherwise, it is invoked immediately."
+  [^ChannelPipeline pipeline callback]
+  (if-let [^SslHandler ssl-handler (.get pipeline SslHandler)]
+    (-> ssl-handler
+        .handshakeFuture
+        wrap-future
+        (d/on-realized (fn [_]
+                         (callback))
+                       ;; No need to handle errors here since
+                       ;; the SSL handler will terminate the
+                       ;; whole pipeline by throwing a
+                       ;; `javax.net.ssl.SSLHandshakeException`
+                       ;; in this case anyway.
+                       (fn [_])))
+    (callback)))
+
 (defn create-client
   ([pipeline-builder
     ssl-context
@@ -1192,12 +1213,22 @@ initialize an DnsAddressResolverGroup instance.
 
               f (if local-address
                   (.connect b remote-address local-address)
-                  (.connect b remote-address))]
+                  (.connect b remote-address))
+              c (d/deferred)]
 
-          (d/chain' (wrap-future f)
-            (fn [_]
-              (let [ch (.channel ^ChannelFuture f)]
-                ch))))))))
+          (-> (wrap-future f)
+              (d/chain'
+               (fn [_]
+                 (let [ch (.channel ^ChannelFuture f)]
+                   (on-connection-fully-established
+                    (.pipeline ch)
+                    (fn []
+                      (d/success! c ch))))))
+              (d/catch
+               (fn [e]
+                 (d/error! c e))))
+
+          c)))))
 
 (defn start-server
   [pipeline-builder
