@@ -26,21 +26,6 @@
 
 (alter-meta! #'->TcpConnection assoc :private true)
 
-(defn on-connection-established [^ChannelHandlerContext ctx callback]
-  (if-let [^SslHandler ssl-handler (-> ctx .pipeline (.get SslHandler))]
-    (-> ssl-handler
-        .handshakeFuture
-        netty/wrap-future
-        (d/on-realized (fn [_]
-                         (callback))
-                       ;; No need to handle errors here since
-                       ;; the SSL handler will terminate the
-                       ;; whole pipeline by throwing a
-                       ;; `javax.net.ssl.SSLHandshakeException`
-                       ;; in this case anyway.
-                       (fn [_])))
-    (callback)))
-
 (defn- ^ChannelHandler server-channel-handler
   [handler {:keys [raw-stream?] :as options}]
   (let [in (atom nil)]
