@@ -1131,7 +1131,7 @@ initialize an DnsAddressResolverGroup instance.
   [dns-options]
   (DnsAddressResolverGroup. (dns-resolver-group-builder dns-options)))
 
-(defn maybe-ssl-handshake-future
+(defn ^:nodoc maybe-ssl-handshake-future
   "Returns a deferred which resolves to the channel after a potential
   SSL handshake has completed successfully. If no `SslHandler` is
   present on the associated pipeline, resolves immediately."
@@ -1142,7 +1142,7 @@ initialize an DnsAddressResolverGroup instance.
         wrap-future)
     (d/success-deferred ch)))
 
-(defn ignore-ssl-handshake-errors
+(defn ^:nodoc ignore-ssl-handshake-errors
   "Intended for use as error callback on a `maybe-ssl-handshake-future`
   within a `:channel-active` handler. In this context, SSL handshake
   errors don't need to be handled since the SSL handler will terminate
