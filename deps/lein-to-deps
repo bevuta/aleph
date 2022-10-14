@@ -4,4 +4,8 @@ set -euo pipefail
 
 cd "$(dirname -- "${BASH_SOURCE[0]}")/.."
 
-lein with-profiles -default pprint | lein with-profiles +lein-to-deps run -m aleph.lein-to-deps/run
+lein2deps_url="https://raw.githubusercontent.com/borkdude/tools/a1b1a5a5203f0deea375985e40050b87738ca356/lein2deps.clj"
+lein2deps=$(curl -sf "$lein2deps_url" || (echo "ERROR: failed to download lein2deps" >&2 && exit 1))
+
+echo ";; DO NOT EDIT MANUALLY - generated from project.clj via deps/lein-to-deps" > deps.edn
+bb --eval "$lein2deps" -- --eval >> deps.edn
